@@ -6,6 +6,8 @@ const longitudeInput = document.getElementById("longitude-input");
 
 let forecastPeriods = [];
 
+let forecastData = [];
+
 const windDirectionGroups = {
   	N: ["N", "NNE", "NNW"],
   	NE: ["NE", "NNE", "ENE"],
@@ -66,7 +68,7 @@ async function fetchForecastData(lat, lon) {
             throw new Error(`Point forecast not found (status: ${pointResponse.status})`);
         }
         const pointData = await pointResponse.json();
-        const forecastUrl = pointData.properties.forecastHourly;
+        const forecastUrl = pointData.properties.forecastGridData;
         debugLog(`Fetching hourly forecast from: ${forecastUrl}`); 
 
         const forecastResponse = await fetch(forecastUrl);
@@ -77,7 +79,7 @@ async function fetchForecastData(lat, lon) {
         }
         const forecastData = await forecastResponse.json();
 
-        return forecastData.properties.periods;
+        return forecastData;
     } catch (error) {
         console.error("Error fetching forecast data:", error);
         throw error;
@@ -85,7 +87,7 @@ async function fetchForecastData(lat, lon) {
 }
 
 async function loadForecastData(lat, lon) {
-  forecastPeriods = await fetchForecastData(lat, lon);
+  forecastData = await fetchForecastData(lat, lon);
 }
 
 
@@ -484,39 +486,10 @@ submitBtn.addEventListener("click", async (e) => {
         debugLog("Loading forecast data for:", lat, lon);
         await loadForecastData(lat, lon);
 
-        debugLog("Raw forecastPeriods array:", forecastPeriods);
-
-        const structuredForecast = processForecastData(forecastPeriods);
-        debugLog("Processed structuredForecast:", structuredForecast);
-
-        const burnPeriodData = filterBurnPeriods(structuredForecast);
-        debugLog("Filtered burnPeriodData (0800-2000):", burnPeriodData);
-
-        const preferredValues = {
-            temp: getRangeValues(preferred.temp),
-            rh: getRangeValues(preferred.rh),
-            windSpeed: getRangeValues(preferred.windSpeed),
-            windDirs: preferred.windDirs()
-        };
-        debugLog("Preferred values:", preferredValues);
-
-        const acceptableValues = {
-            temp: getRangeValues(acceptable.temp),
-            rh: getRangeValues(acceptable.rh),
-            windSpeed: getRangeValues(acceptable.windSpeed),
-            windDirs: acceptable.windDirs()
-        };
-        debugLog("Acceptable values:", acceptableValues);
-
-        const evaluatedBurnPeriodData = burnPeriodData.map(period => ({
-            ...period,
-            status: determineStatus(period, preferredValues, acceptableValues)
-        }));
-        debugLog("Evaluated burn period data with status:", evaluatedBurnPeriodData);
+        console.log("Raw forecastData array:", forecastData);
 
         buildLegend();
-        buildForecastGrid(evaluatedBurnPeriodData);
-
+        
     } catch (error) {
         console.error("Error caught in event listener:", error);
         showErrorMessage("No forecast data found for this location. Please check your latitude and longitude.");
