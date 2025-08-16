@@ -1,0 +1,124 @@
+Burn Weather Planning App
+
+The purpose of this app is to assist with prescribed burn planning by looking at the point forecast for a particular burn area and determining if there are any burn windows in the forecast period. 
+
+User inputs:
+	Property name
+	lat/long (in decimal degrees format initially. Will provide code to convert from different formats later)
+	Acceptable weather parameters
+		temperture: min and max
+		relative humidity: min and max
+		wind speed: min and max
+		wind direction(s): (not sure how the API stores wind direction data, but will probably use inputs similar to Rx Burn Project)
+	Preferred weather parameters
+		Same as above
+		
+The app will fetch data from the National Weather Service API (https://api.weather.gov/points/{latitude}, {longitude})
+
+App will filter throught the severn-day forecast to determine if there is an burn window in the forecast.
+	burn window = any hours between 0800 and 2000 that are forecast to be within either the acceptable or preferred parameters
+	
+Results will be displayed by date with the hours color coded for an visual output.
+
+------------
+
+basic HTML structure
+<form>
+	<fieldset>
+		<legend> Burn Information
+		<label> Property Name
+		<input>
+		<label> Latitude
+		<input> 
+		<label> Longitude
+		<input>
+	<fieldset>
+		<legend> Acceptable Weather Conditions
+		weather inputs
+	<fieldset>
+		<legend> Preferred Weather Conditions
+		weather inputs
+</form>
+
+<submit button> <save button> <clear button>
+
+<div id="output-container">
+	<div>date
+		<div> 0800
+		<div> 0900
+		<div> 1000
+		...
+		<div> 2000
+	</div>
+	<div repeat for rest of forecast period
+</div>
+
+------------
+
+JavaScript
+
+I'm not sure how the data is named/formatted/structured in the JSON file that will be fetched from the API. That will determine how some of the code will work.
+
+functions
+	fetch data from NWS based on the lat/long inputs provided by the user
+		
+	connect/link appropriate hourly forecast data to date/hour <div> in HTML
+	parse the forecast data to determine if it is in preferred range, acceptable range, or out of prescription
+	color each hourly <div> based on status:
+		preferred = green
+		acceptable = yellow
+		no burn = gray
+	(It feels like these should all be separate functions, but I'm not sure how to go about it)
+	
+	save inputs to localStorage
+	
+	clear input fields and output container
+	
+	validate lat/long inputs and (at a later date) convert format to work with the API
+	
+	
+psuedocode:
+
+for the main functionality of the app
+hourlyData.forEach((hour) => {
+	if (hour >= 0800 && hour <= 2000) {  						// this check might be better as it's own function?
+		if (temp >= preferred temp min && temp <= preferred temp max 
+		&& rh >= preferred rh min && rh <= preferred rh max 
+		&& wind speed >= preferred wind speed min && wind speed <= preferred wind speed max
+		&& wind direction === preferred wind directions) {
+				div.display.style = green;						// or set display element to = "preferred" and change color in diff func
+		} else if (temp >= acceptable temp min && temp <= acceptable temp max 
+		&& rh >= acceptable rh min && rh <= acceptable rh max 
+		&& wind speed >= acceptable wind speed min && wind speed <= acceptable wind speed max 
+		&& wind direction === acceptable wind directions) {
+			div.display.style = yellow;
+		}
+	}
+})
+
+Or would it be better to split out everything into different functions?
+	function isTempPreferred()
+	function isRhPreferred()
+	function isWindSpeedPreferred()
+	function isWindDirectionPreferred()
+	...
+	...
+	then another function would check to see if all parameters were preferred, acceptable, or no burn
+	
+------------
+
+Other notes:
+
+Some forecasts might not line up exaclty with the output container, depending on when the forecast is fetched.
+If the forecast is fetched in the afternoon, the data for that morning would be missing. Those divs should be a different color (a lighter gray).
+Would that necessitate adding an additional day <div> to capture the end of the forecast period?
+
+Depending on how the data is received, it would be nice to have the day <div>s updated with the appropriate date (and day of the week, if possible).
+
+
+date
+hour
+temp
+rh
+windSpeed
+windDir

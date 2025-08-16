@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="stylesheet" href="dist/styles.css">
+    <title>Burn Weather Planning App</title>
+</head>
+<body class="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100 p-4">
+    <header class="p-4 text-center">
+        <h1 class="text-2xl font-bold">Rx Burn Weather Planning App</h1>
+        <h2 class="text-large font-semibold p-2">Enter burn information and weather parameters below to see possible burn windows for the forecast period.</h2>
+    </header>
+
+    <main class="max-w-3xl mx-auto bg-white dark:bg-gray-900 p-4 sm:p-6 rounded-xl shadow-md space-y-6 text-gray-900 dark:text-gray-100">
+        <div id="form-container">
+            <form id="weather-form">
+                <fieldset class="border-2 border-gray-300 dark:border-gray-600 p-4 rounded-md mb-6">
+                    <legend class="font-semibold text-lg text-gray-700 dark:text-gray-300 mb-4 px-2">Burn Information</legend>
+
+                    <div class="flex items-center gap-4 mb-4">
+                        <label for="property-name" class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200">Property Name</label>
+                        <input type="text" id="property-name" name="property-name" class="w-[80%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500">
+                    </div>
+                    
+                    <div class="flex items-center gap-4 mb-4">
+                        <label for="latitude-input" class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200">Latitude</label>
+                        <input type="number" id="latitude-input" name="latitude-input" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="24.50000" max="49.00000" step="any" placeholder="ex. 30.00000" required>
+
+                        <label for="longitude-input" class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200">Longitude</label>
+                        <input type="number" id="longitude-input" name="longitude-input" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="-125.00000" max="-66.50000" step="any" placeholder="ex. -98.00000" required>
+                    </div>
+
+                    <p class="text-sm dark:text-white mt-2">Latitude and longitude must be in Decimal Degrees. To convert from Degrees Minutes Seconds (DMS), 
+                        <a href="https://www.fcc.gov/media/radio/dms-decimal" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400">use this conversion tool
+                    	</a>. 
+                    </p>
+                </fieldset>
+
+                <fieldset class="border-2 border-gray-300 dark:border-gray-600 p-4 rounded-md mb-6">
+                    <legend class="font-semibold text-lg text-gray-700 dark:text-gray-300 mb-4 px-2">Preferred Weather Parameters</legend>
+
+                    <div class="flex items-center gap-4 mb-4">
+                        <h4 class="font-semibold">Temperature</h4>
+
+                        <label for="preferred-min-temp" class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200">Min</label>
+                        <input type="number" id="preferred-min-temp" name="preferred-min-temp" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="0" max="120">
+                        <label for="preferred-max-temp" class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200">Max</label>
+                        <input type="number" id="preferred-max-temp" name="preferred-max-temp" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="0" max="120">
+                    </div>
+                    
+                    <div class="flex items-center gap-4 mb-4">
+                        <h4 class="font-semibold">Relative Humidity</h4>
+
+                        <label for="preferred-min-rh" class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200">Min</label>
+                        <input type="number" id="preferred-min-rh" name="preferred-min-rh" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="1" max="100">
+                        <label for="preferred-max-rh" class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200">Max</label>
+                        <input type="number" id="preferred-max-rh" name="preferred-max-rh" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="1" max="100">
+                    </div>
+
+                    <div class="flex items-center gap-4 mb-4">
+                        <h4 class="font-semibold">Wind Speed</h4>
+
+                        <label for="preferred-min-wind-speed" class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200">Min</label>
+                        <input type="number" id="preferred-min-wind-speed" name="preferred-min-wind-speed" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="0">
+                        <label for="preferred-max-wind-speed" class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200">Max</label>
+                        <input type="number" id="preferred-max-wind-speed" name="preferred-max-wind-speed" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="1">
+                    </div>
+
+                    <div class="flex items-center gap-2 mb-4">
+                        <h4 class="font-semibold">Wind Direction(s)</h4>
+
+                        <label class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="preferredWindDir" value="N" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> N</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="preferredWindDir" value="NE" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> NE</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="preferredWindDir" value="E" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> E</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="preferredWindDir" value="SE" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> SE</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="preferredWindDir" value="S" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> S</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="preferredWindDir" value="SW" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> SW</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="preferredWindDir" value="W" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> W</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="preferredWindDir" value="NW" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> NW</label>
+                        <div class="flex gap-4">
+                    </div>
+                </fieldset>
+
+                <fieldset class="border-2 border-gray-300 dark:border-gray-600 p-4 rounded-md mb-6">
+                    <legend class="font-semibold text-lg text-gray-700 dark:text-gray-300 mb-4 px-2">Acceptable Weather Parameters</legend>
+
+                    <div class="flex items-center gap-4 mb-4">
+                        <h4 class="font-semibold">Temperature</h4>
+
+                        <label for="acceptable-min-temp" class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200">Min</label>
+                        <input type="number" id="acceptable-min-temp" name="acceptable-min-temp" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="0" max="120">
+                        <label for="acceptable-max-temp" class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200">Max</label>
+                        <input type="number" id="acceptable-max-temp" name="acceptable-max-temp" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="0" max="120">
+                    </div>
+
+                    <div class="flex items-center gap-4 mb-4">
+                        <h4 class="font-semibold">Relative Humidity</h4>
+
+                        <label for="acceptable-min-rh" class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200">Min</label>
+                        <input type="number" id="acceptable-min-rh" name="acceptable-min-rh" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="1" max="100">
+                        <label for="acceptable-max-rh" class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200">Max</label>
+                        <input type="number" id="acceptable-max-rh" name="acceptable-max-rh" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="1" max="100">                        
+                    </div>
+
+                    <div class="flex items-center gap-4 mb-4">
+                        <h4 class="font-semibold">Wind Speed</h4>
+
+                        <label for="acceptable-min-wind-speed" class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200">Min</label>
+                        <input type="number" id="acceptable-min-wind-speed" name="acceptable-min-wind-speed" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="0">
+                        <label for="acceptable-max-wind-speed" class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200">Max</label>
+                        <input type="number" id="acceptable-max-wind-speed" name="acceptable-max-wind-speed" class="w-[30%] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:ring-2 hover:ring-blue-500" min="1">
+                    </div>
+
+                    <div class="flex items-center gap-2 mb-4">
+                        <h4 class="font-semibold">Wind Direction(s)</h4>
+
+                        <label class="block font-semibold text-sm mb-1 ml-auto text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="acceptableWindDir" value="N" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> N</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="acceptableWindDir" value="NE" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> NE</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="acceptableWindDir" value="E" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> E</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="acceptableWindDir" value="SE" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> SE</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="acceptableWindDir" value="S" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> S</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="acceptableWindDir" value="SW" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> SW</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="acceptableWindDir" value="W" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> W</label>
+                        <label class="block font-semibold text-sm mb-1 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 hover:ring hover:ring-blue-500 rounded-sm p-1"><input type="checkbox" name="acceptableWindDir" value="NW" class="text-sm text-gray-700 dark:text-gray-200 font-semibold sm:mr-4"> NW</label>                        
+                    </div>
+                </fieldset>
+
+                <div id="error-message" class="hidden text-center text-red-600 font-semibold border border-red-600 rounded-sm my-2"></div>
+                <div id="save-message" class="hidden text-center text-green-500 font-semibold border border-green-500 rounded-sm my-2">Settings Saved!</div>
+
+                <div id="button-container" class="flex flex-col sm:flex-row sm:justify-between gap-4">
+                    <button type="submit" id="submit-button" class="mt-6 px-5 py-2 rounded-md bg-blue-700 hover:bg-blue-800 text-white font-semibold text-sm shadow-md">Submit</button>
+
+                    <button type="button" id="save-button" class="mt-6 px-5 py-2 rounded-md bg-green-700 hover:bg-blue-800 text-white font-semibold text-sm shadow-md">Save</button>
+
+                    <button type="button" id="clear-button" class="mt-6 px-5 py-2 rounded-md bg-orange-600 hover:bg-blue-800 text-white font-semibold text-sm shadow-md">Clear</button>
+                </div>
+            </form>
+        </div>
+
+
+        <h2 id="output-header" data-base="Forecast Burn Windows" class="text-large text-center font-semibold p-2 mb-4">Forecast Burn Windows</h2>
+        <div id="legend-container"></div>
+        <section id="output-container" class="max-w-screen-md mx-auto px-4" aria-live="polite"></section>
+
+    </main>
+
+    <footer class="text-center mt-8 text-sm text-gray-500">
+        <p>&copy; 2025 evans-rxfire. Licensed under the
+            <a href="LICENSE" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400">MIT License</a>.
+        </p>
+
+        <p class="mt-2">
+            Geolocation data © <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400">OpenStreetMap</a> contributors.
+        </p>
+
+        <button id="dark-mode-toggle" class="inline-block px-4 py-2 rounded-md font-medium transition-colors bg-gray-300 text-gray-800 hover:bg-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 text-sm mt-2">
+        Toggle Dark Mode</button>
+    </footer>
+    
+    <script src="js/main.js" defer></script>
+</body>
+</html>
