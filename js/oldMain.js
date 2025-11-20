@@ -6,9 +6,6 @@ const longitudeInput = document.getElementById("longitude-input");
 
 let forecastPeriods = [];
 
-let forecastData = [];
-
-// this will need to change since the grid forecast uses degrees
 const windDirectionGroups = {
   	N: ["N", "NNE", "NNW"],
   	NE: ["NE", "NNE", "ENE"],
@@ -26,6 +23,9 @@ const outputContainer = document.getElementById("output-container");
 const submitBtn = document.getElementById("submit-button");
 const saveBtn = document.getElementById("save-button");
 const clearBtn = document.getElementById("clear-button");
+
+let deferredPrompt;
+const installBtn = document.getElementById("install-button");
 
 const darkModeBtn = document.getElementById("dark-mode-toggle");
 
@@ -46,6 +46,15 @@ if (darkModeBtn) {
     });
 }
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .then((reg) => debugLog("Service Worker registered:", reg.scope))
+      .catch((err) => debugLog("Service Worker registration failed:", err));
+  });
+}
+
 
 // FUNCTIONS
 // Debugging
@@ -53,6 +62,11 @@ function debugLog(...args) {
     if (DEBUG) {
         console.log(...args);
     }
+}
+
+// Check if PWA to disable location info fetch from Nominatim
+function isPWA() {
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
 
@@ -69,7 +83,7 @@ async function fetchForecastData(lat, lon) {
             throw new Error(`Point forecast not found (status: ${pointResponse.status})`);
         }
         const pointData = await pointResponse.json();
-        const forecastUrl = pointData.properties.forecastGridData;
+        const forecastUrl = pointData.properties.forecastHourly;
         debugLog(`Fetching hourly forecast from: ${forecastUrl}`); 
 
         const forecastResponse = await fetch(forecastUrl);
@@ -80,7 +94,7 @@ async function fetchForecastData(lat, lon) {
         }
         const forecastData = await forecastResponse.json();
 
-        return forecastData;
+        return forecastData.properties.periods;
     } catch (error) {
         console.error("Error fetching forecast data:", error);
         throw error;
@@ -88,15 +102,47 @@ async function fetchForecastData(lat, lon) {
 }
 
 async function loadForecastData(lat, lon) {
-  forecastData = await fetchForecastData(lat, lon);
+  forecastPeriods = await fetchForecastData(lat, lon);
+}
+
+
+// Function to retrieve location information from Nominatim
+async function fetchLocationDetails(lat, lon) {
+    const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=8&addressdetails=1`;
+
+    try {
+        const response = await fetch(nominatimUrl, {
+            headers: {
+                "User-Agent": "RxBurnWeatherPlanner/1.0 (evans.rxfire@gmail.com) "
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Location lookup failed (status: ${response.status})`);
+        }
+
+        const data = await response.json();
+        const address = data.address || {};
+
+        return {
+            county: address.county || "Unknown County",
+            state: address.state || "Unknown State"
+        };
+    } catch (error) {
+        console.error("Error fetching location details:", error);
+        return {
+            county: "Unknown County",
+            state: "Unknown State"
+        };
+    }
+}
+
+async function loadLocationData(lat, lon) {
+    return await fetchLocationDetails(lat, lon);
 }
 
 
 // Functions to work through weather forecast data
-
-//How much of this will need to change based on differences between hourly forecast and grid forecast????
-
-// change?
 function processForecastData(periods) {
     return periods.map((period) => {
         const dateObj = new Date(period.startTime);
@@ -145,7 +191,6 @@ function setCheckedDirs(groupName, checkedValues) {
 }
 
 
-// possibly need to add mixing height and transport wind speed?
 function getPreferredAndAcceptable() {
     return {
         preferred: {
@@ -181,7 +226,6 @@ function getPreferredAndAcceptable() {
     }
 }
 
-// this will need to be modified since using degrees in grid forecast
 function matchesWindDirGroup(userDirs, forecastDir) {
   	return userDirs.some(userDir => {
     	const group = windDirectionGroups[userDir] || [];
@@ -230,7 +274,7 @@ function buildLegend() {
         itemDiv.className = `flex items-center gap-2`;
 
         const colorBox = document.createElement("div");
-        colorBox.className = `${item.color} w-6 h-6 rounded-sm`;
+        colorBox.className = `${item.color} w-6 h-6 rounded`;
 
         const label = document.createElement("span");
         label.textContent = item.label;
@@ -244,11 +288,10 @@ function buildLegend() {
 }
 
 // Populate forecast grid in index.html
-// I'm not even sure what to do with this. Do we change it to a <table> or leave it as <div>s? 
-function buildForecastGrid(evaluatedBurnPeriodData) {
+function buildForecastGrid(evaluatedBurnPeriodData, location) {
     clearForecastGrid();
 
-    outputHeader.textContent += ` for: ${propertyName.value}`;
+    outputHeader.textContent += ` for: ${propertyName.value}, ${location.county}, ${location.state}`;
 
     const groupedByDate = evaluatedBurnPeriodData.reduce((groups, period) => {
         if (!groups[period.date]) {
@@ -268,7 +311,7 @@ function buildForecastGrid(evaluatedBurnPeriodData) {
 
     for (const [date, periods] of Object.entries(groupedByDate)) {
         const dayColumn = document.createElement("div");
-        dayColumn.className = "flex flex-col w-28 border border-gray-300 dark:border-gray-600 rounded-sm p-3 shadow-sm bg-white dark:bg-gray-900";
+        dayColumn.className = "flex flex-col w-28 border border-gray-300 dark:border-gray-600 rounded p-3 shadow-sm bg-white dark:bg-gray-900";
 
         const firstPeriodDate = new Date(periods[0].startTime);
         const dayName = firstPeriodDate.toLocaleDateString(undefined, { weekday: "short" });
@@ -321,8 +364,6 @@ function buildForecastGrid(evaluatedBurnPeriodData) {
     outputContainer.appendChild(gridContainer);
 }
 
-
-// These functions will need updated if adding mixing height and transport winds to form
 
 // Save form data for future use
 function saveFormData() {
@@ -471,7 +512,6 @@ function clearErrorMessage() {
 document.addEventListener("DOMContentLoaded", loadFormData);
 
 
-//EVENT LISTENER for submit button --- fetch weather data, evaluate burn periods, and populate output
 submitBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
@@ -497,10 +537,53 @@ submitBtn.addEventListener("click", async (e) => {
         debugLog("Loading forecast data for:", lat, lon);
         await loadForecastData(lat, lon);
 
-        console.log("Raw forecastData array:", forecastData);
+        let location = { county: "Unknown County", state: "Unknown State" };
+        if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true) {
+            console.warn("PWA mode detected. Skipping location lookup.");
+
+            const locationNotice = document.createElement("span");
+            locationNotice.className = "text-md text-blue-600 dark:text-blue-500";
+            locationNotice.textContent = "(Location information is unavailable in installed mode)";
+
+            outputHeader.appendChild(locationNotice);
+        } else {
+            debugLog("Fetching location data for:", lat, lon);
+            location = await loadLocationData(lat, lon);
+        }
+
+        debugLog("Raw forecastPeriods array:", forecastPeriods);
+
+        const structuredForecast = processForecastData(forecastPeriods);
+        debugLog("Processed structuredForecast:", structuredForecast);
+
+        const burnPeriodData = filterBurnPeriods(structuredForecast);
+        debugLog("Filtered burnPeriodData (0800-2000):", burnPeriodData);
+
+        const preferredValues = {
+            temp: getRangeValues(preferred.temp),
+            rh: getRangeValues(preferred.rh),
+            windSpeed: getRangeValues(preferred.windSpeed),
+            windDirs: preferred.windDirs()
+        };
+        debugLog("Preferred values:", preferredValues);
+
+        const acceptableValues = {
+            temp: getRangeValues(acceptable.temp),
+            rh: getRangeValues(acceptable.rh),
+            windSpeed: getRangeValues(acceptable.windSpeed),
+            windDirs: acceptable.windDirs()
+        };
+        debugLog("Acceptable values:", acceptableValues);
+
+        const evaluatedBurnPeriodData = burnPeriodData.map(period => ({
+            ...period,
+            status: determineStatus(period, preferredValues, acceptableValues)
+        }));
+        debugLog("Evaluated burn period data with status:", evaluatedBurnPeriodData);
 
         buildLegend();
-        
+        buildForecastGrid(evaluatedBurnPeriodData, location);
+
     } catch (error) {
         console.error("Error caught in event listener:", error);
         showErrorMessage("No forecast data found for this location. Please check your latitude and longitude.");
@@ -508,7 +591,6 @@ submitBtn.addEventListener("click", async (e) => {
 });
 
 
-// EVENT LISTENERS for handling form data
 saveBtn.addEventListener("click", () => {
     saveFormData();
 
@@ -527,4 +609,36 @@ saveBtn.addEventListener("click", () => {
 clearBtn.addEventListener("click", () => {
     clearFormData();
     clearForecastGrid();
+});
+
+
+// app install language
+installBtn?.classList.add("hidden");
+
+
+window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    installBtn?.classList.remove("hidden");
+});
+
+
+installBtn?.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+
+    const { outcome } = await deferredPrompt.userChoice;
+    debugLog("User choice:", outcome);
+
+    deferredPrompt = null;
+    installBtn?.classList.add("hidden");
+});
+
+
+window.addEventListener("appinstalled", () => {
+    debugLog("✅ App installed");
+    deferredPrompt = null;
+    installBtn?.classList.add("hidden");
 });
