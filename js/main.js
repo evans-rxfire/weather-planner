@@ -56,6 +56,39 @@ function debugLog(...args) {
     }
 }
 
+// Conversion functions
+function convertCtoF(c) {
+    if (c === null || c === undefined) return null;
+    return (c * 9/5) + 32;
+}
+
+function convertKmHtoMph(kmh) {
+    if (kmh === null || kmh === undefined) return null;
+    return kmh * 0.621371;
+}
+
+function convertMetersToFeet(m) {
+    if (!m && m !== 0) return null;
+    return m * 3.28084;
+}
+
+function safeFloor(value, converter = v => v) {
+    if (value === null || value === undefined) return null;
+    return Math.floor(converter(value));
+}
+
+function formatForecastLocalTime(isoString, timeZone) {
+    return new Date(isoString).toLocaleString("en-US", {
+        timeZone: timeZone || "UTC",
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false  // 24-hour format
+    });
+}
+
 
 // Get data from weather API
 async function fetchForecastData(lat, lon) {
@@ -81,7 +114,12 @@ async function fetchForecastData(lat, lon) {
         }
         const forecastGridData = await forecastResponse.json();
 
-        return forecastGridData;
+        return {
+            gridData: forecastGridData,
+            timeZone: pointData.properties.timeZone,
+            locationName: pointData.properties.relativeLocation?.properties?.city || null
+        };
+
     } catch (error) {
         console.error("Error fetching forecast data:", error);
         throw error;
@@ -89,25 +127,119 @@ async function fetchForecastData(lat, lon) {
 }
 
 async function loadForecastData(lat, lon) {
-  rawForecastData = await fetchForecastData(lat, lon);
+  const result = await fetchForecastData(lat, lon);
+  return result;
 }
 
 
 // Functions to process forecast data into more easily usable format
+// Extract gridForecast.properties needed
+function getFireWeatherForecastData(gridData) {
+    const props = gridData.properties;
 
-function getFireWeatherForecastData(gridForecast) {
-    // extract gridForecast.properties needed
-
+    return {
+        temperature: props.temperature || null,
+        dewpoint: props.dewpoint || null,
+        relativeHumidity: props.relativeHumidity || null,
+        twentyFootWindSpeed: props.twentyFootWindSpeed || null,
+        twentyFootWindDirection: props.twentyFootWindDirection || null,
+        skyCover: props.skyCover || null,
+        probabilityOfPrecipitation: props.probabilityOfPrecipitation || null,
+        mixingHeight: props.mixingHeight || null,
+        transportWindSpeed: props.transportWindSpeed || null,
+        transportWindDirection: props.transportWindDirection || null
+    };
 }
 
-function expandForecastData(gridForecast) {
-    // expand forecast data set to have a value for every period(hour) in the forecast
+// Weather data ISO-8601 duration parser
+function parseDurationToHours(duration) {
+    const dayMatch = duration.match(/(\d+)D/);
+    const hourMatch = duration.match(/(\d+)H/);
 
+    const days = dayMatch ? parseInt(dayMatch[1], 10) : 0;
+    const hours = hourMatch ? parseInt(hourMatch[1], 10) : 0;
+
+    return (days * 24) + hours;
 }
 
-function convertForecastData(gridForecast) {
-    // convert timestamps and units
+// Expand a single validTime entry
+function expandValidTimeEntry(entry) {
+    const [startTimeStr, durationStr] = entry.validTime.split("/");
+    const durationHours = parseDurationToHours(durationStr);
 
+    const start = new Date(startTimeStr);
+    const expanded = [];
+
+    for (let i = 0; i < durationHours; i++) {
+        const t = new Date(start);
+        t.setHours(start.getHours() + i);
+
+        expanded.push({
+            time: t.toISOString(), // keep standardized
+            value: entry.value
+        });
+    }
+
+    return expanded;
+}
+
+// Expand single field in fireWeatherData
+function expandedSingleField(field) {
+    if (!field || !field.values) return [];
+
+    let expanded = [];
+
+    field.values.forEach(entry => {
+        expanded.push(...expandValidTimeEntry(entry));
+    });
+
+    return expanded;
+}
+
+// Expand all weather fields
+function expandForecastData(fireWeatherData) {
+    const expanded = {};
+
+    for (const [key, field] of Object.entries(fireWeatherData)) {
+        expanded[key] = expandedSingleField(field);
+    }
+
+    return expanded;
+}
+
+// Merge forecast data by time stamp
+function mergeExpandedForecast(expandedData) {
+    const timeline = {};
+
+    for (const [field, values] of Object.entries(expandedData)) {
+        values.forEach(({ time, value }) => {
+            if (!timeline[time]) timeline[time] = { time };
+            timeline[time][field] = value;
+        });
+    }
+
+    // Convert object → sorted array
+    return Object.values(timeline).sort(
+        (a, b) => new Date(a.time) - new Date(b.time)
+    );
+}
+
+// Normalize weather forecast data
+function normalizeForecastData(mergedData, forecastTimezone) {
+    return mergedData.map(entry => ({
+        timeUTC: entry.time,
+        displayTime: formatForecastLocalTime(entry.time, forecastTimezone),
+        temperature: safeFloor(convertCtoF(entry.temperature)),
+        dewpoint: safeFloor(convertCtoF(entry.dewpoint)),
+        relativeHumidity: entry.relativeHumidity ?? null,
+        twentyFootWindSpeed: safeFloor(convertKmHtoMph(entry.twentyFootWindSpeed)),
+        twentyFootWindDirection: entry.twentyFootWindDirection ?? null,
+        mixingHeight: safeFloor(convertMetersToFeet(entry.mixingHeight)),
+        transportWindSpeed: safeFloor(convertKmHtoMph(entry.transportWindSpeed)),
+        transportWindDirection: entry.transportWindDirection ?? null,
+        skyCover: entry.skyCover ?? null,
+        probabilityOfPrecipitation: entry.probabilityOfPrecipitation ?? null
+    }));
 }
 
 
@@ -329,9 +461,22 @@ submitBtn.addEventListener("click", async (e) => {
 
     try {
         debugLog("Loading forecast data for:", lat, lon);
-        await loadForecastData(lat, lon);
+        const result = await loadForecastData(lat, lon);
 
-        console.log("forecastGridData array:", rawForecastData);
+        const rawForecastData = result.gridData;
+        const forecastTimezone = result.timeZone;
+
+        const fireWeatherData = getFireWeatherForecastData(rawForecastData);
+        // console.log("Extracted Fire Weather Data:", fireWeatherData);
+
+        const expandedFireWeatherData = expandForecastData(fireWeatherData);
+        // console.log("Expanded Fire Weather Data:", expandedFireWeatherData);
+
+        const mergedFireWeatherData = mergeExpandedForecast(expandedFireWeatherData);
+        // console.log("Merged Fire Weather Data:", mergedFireWeatherData);
+
+        const normalizedFireWeatherData = normalizeForecastData(mergedFireWeatherData, forecastTimezone);
+        console.log("Normalized Fire Weather Data:", normalizedFireWeatherData)
         
     } catch (error) {
         console.error("Error caught in event listener:", error);
