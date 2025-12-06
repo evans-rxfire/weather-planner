@@ -6,9 +6,9 @@ const longitudeInput = document.getElementById("longitude-input");
 
 let forecastPeriods = [];
 
-let forecastData = [];
+let rawForecastData = [];
 
-// this will need to change since the grid forecast uses degrees
+// will this need to change since the grid forecast uses degrees?
 const windDirectionGroups = {
   	N: ["N", "NNE", "NNW"],
   	NE: ["NE", "NNE", "ENE"],
@@ -48,6 +48,7 @@ if (darkModeBtn) {
 
 
 // FUNCTIONS
+
 // Debugging
 function debugLog(...args) {
     if (DEBUG) {
@@ -78,9 +79,9 @@ async function fetchForecastData(lat, lon) {
         if (!forecastResponse.ok) {
             throw new Error(`Hourly forecast not found (status: ${forecastResponse.status})`);
         }
-        const forecastData = await forecastResponse.json();
+        const forecastGridData = await forecastResponse.json();
 
-        return forecastData;
+        return forecastGridData;
     } catch (error) {
         console.error("Error fetching forecast data:", error);
         throw error;
@@ -88,45 +89,29 @@ async function fetchForecastData(lat, lon) {
 }
 
 async function loadForecastData(lat, lon) {
-  forecastData = await fetchForecastData(lat, lon);
+  rawForecastData = await fetchForecastData(lat, lon);
 }
 
 
-// Functions to work through weather forecast data
+// Functions to process forecast data into more easily usable format
 
-//How much of this will need to change based on differences between hourly forecast and grid forecast????
+function getFireWeatherForecastData(gridForecast) {
+    // extract gridForecast.properties needed
 
-// change?
-function processForecastData(periods) {
-    return periods.map((period) => {
-        const dateObj = new Date(period.startTime);
-        
-        const hour = String(dateObj.getHours()).padStart(2, '0') + '00';
-        
-        const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
-        const date = `${year}-${month}-${day}`;
-
-        return {
-            date: date,
-            hour: hour,
-            temp: period.temperature,
-            rh: period.relativeHumidity.value,
-            windSpeed: parseInt(period.windSpeed),
-            windDir: period.windDirection,
-            startTime: period.startTime
-        };
-  	});
 }
 
-function filterBurnPeriods(periods) {
-    return periods.filter((period) => {
-        const hourInt = parseInt(period.hour);
-        return hourInt >= 800 && hourInt <= 2000;
-    });
+function expandForecastData(gridForecast) {
+    // expand forecast data set to have a value for every period(hour) in the forecast
+
 }
 
+function convertForecastData(gridForecast) {
+    // convert timestamps and units
+
+}
+
+
+// Functions to process form input data
 
 function getCheckedDirs(name) {
     return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
@@ -143,8 +128,6 @@ function setCheckedDirs(groupName, checkedValues) {
         cb.checked = checkedValues.includes(cb.value);
     });
 }
-
-
 // possibly need to add mixing height and transport wind speed?
 function getPreferredAndAcceptable() {
     return {
@@ -181,149 +164,7 @@ function getPreferredAndAcceptable() {
     }
 }
 
-// this will need to be modified since using degrees in grid forecast
-function matchesWindDirGroup(userDirs, forecastDir) {
-  	return userDirs.some(userDir => {
-    	const group = windDirectionGroups[userDir] || [];
-    	return group.includes(forecastDir);
-  	});
-}
-
-
-function determineStatus(period, preferred, acceptable) {
-    const { temp, rh, windSpeed, windDir } = period;
-
-    if (
-        temp >= preferred.temp.min && temp <= preferred.temp.max &&
-        rh >= preferred.rh.min && rh <= preferred.rh.max &&
-        windSpeed >= preferred.windSpeed.min && windSpeed <= preferred.windSpeed.max &&
-        matchesWindDirGroup(preferred.windDirs, windDir)
-    ) {
-        return "preferred";
-    } else if (
-        temp >= acceptable.temp.min && temp <= acceptable.temp.max &&
-        rh >= acceptable.rh.min && rh <= acceptable.rh.max &&
-        windSpeed >= acceptable.windSpeed.min && windSpeed <= acceptable.windSpeed.max &&
-        matchesWindDirGroup(acceptable.windDirs, windDir)
-    ) {
-        return "acceptable";
-    } else {
-        return "unsuitable";
-    }
-}
-
-// Build legend for output-container in index.html
-function buildLegend() {
-    const legendContainer = document.getElementById("legend-container");
-    legendContainer.innerHTML = "";
-    const legendItems = [
-        { label: "Preferred", color: "bg-sky-300 dark:bg-sky-600" },
-        { label: "Acceptable", color: "bg-green-300 dark:bg-green-700" },
-        { label: "Not in Prescription", color: "bg-gray-300 dark:bg-gray-600" },
-    ];
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "flex justify-center gap-4 mb-4 text-sm";
-
-    legendItems.forEach(item => {
-        const itemDiv = document.createElement("div");
-        itemDiv.className = `flex items-center gap-2`;
-
-        const colorBox = document.createElement("div");
-        colorBox.className = `${item.color} w-6 h-6 rounded-sm`;
-
-        const label = document.createElement("span");
-        label.textContent = item.label;
-
-        itemDiv.appendChild(colorBox);
-        itemDiv.appendChild(label);
-        wrapper.appendChild(itemDiv);
-    });
-
-    legendContainer.appendChild(wrapper);
-}
-
-// Populate forecast grid in index.html
-// I'm not even sure what to do with this. Do we change it to a <table> or leave it as <div>s? 
-function buildForecastGrid(evaluatedBurnPeriodData) {
-    clearForecastGrid();
-
-    outputHeader.textContent += ` for: ${propertyName.value}`;
-
-    const groupedByDate = evaluatedBurnPeriodData.reduce((groups, period) => {
-        if (!groups[period.date]) {
-            groups[period.date] = [];
-        }
-        groups[period.date].push(period);
-        return groups;
-    }, {});
-
-    const burnHours = [
-        "0800", "0900", "1000", "1100", "1200", "1300",
-        "1400", "1500", "1600", "1700", "1800", "1900", "2000"
-    ];
-
-    const gridContainer = document.createElement("div");
-    gridContainer.className = "flex gap-2 justify-center";
-
-    for (const [date, periods] of Object.entries(groupedByDate)) {
-        const dayColumn = document.createElement("div");
-        dayColumn.className = "flex flex-col w-28 border border-gray-300 dark:border-gray-600 rounded-sm p-3 shadow-sm bg-white dark:bg-gray-900";
-
-        const firstPeriodDate = new Date(periods[0].startTime);
-        const dayName = firstPeriodDate.toLocaleDateString(undefined, { weekday: "short" });
-        const month = firstPeriodDate.getMonth() + 1;
-        const day = firstPeriodDate.getDate();
-
-        const dateHeader = document.createElement("div");
-        dateHeader.textContent = `${dayName} ${month}/${day}`;
-        dateHeader.className = "font-semibold mb-2 text-center text-lg text-gray-700 dark:text-gray-200";
-
-        dayColumn.appendChild(dateHeader);
-
-        burnHours.forEach((hour) => {
-            const period = periods.find(p => p.hour === hour);
-
-            const hourDiv = document.createElement("div");
-            hourDiv.className = "p-3 mb-2 rounded-lg text-sm font-medium text-center cursor-default";
-
-            if (period) {
-                hourDiv.textContent = `${period.hour}`;
-                hourDiv.className += ` ${
-                    period.status === "preferred"
-                        ? "bg-sky-300 dark:bg-sky-600 dark:text-white"
-                        : period.status === "acceptable"
-                        ? "bg-green-300 dark:bg-green-700 dark:text-white"
-                        : "bg-gray-300 dark:bg-gray-600 dark:text-white"
-                }`;
-
-                hourDiv.title = `
-                    Date: ${period.date}
-                    Hour: ${period.hour}
-                    Temp: ${period.temp}\u00B0F
-                    RH: ${period.rh}%
-                    Wind Speed: ${period.windSpeed}mph
-                    Wind Direction: ${period.windDir}
-                    Status: ${period.status}
-                `.trim();
-            } else {
-                hourDiv.className += " bg-transparent";
-                hourDiv.textContent = "";
-                hourDiv.title = `No data for ${hour}`;
-            }
-
-            dayColumn.appendChild(hourDiv);
-        });
-
-        gridContainer.appendChild(dayColumn);
-    }
-
-    outputContainer.appendChild(gridContainer);
-}
-
-
 // These functions will need updated if adding mixing height and transport winds to form
-
 // Save form data for future use
 function saveFormData() {
     const name = propertyName.value;
@@ -471,11 +312,11 @@ function clearErrorMessage() {
 document.addEventListener("DOMContentLoaded", loadFormData);
 
 
-//EVENT LISTENER for submit button --- fetch weather data, evaluate burn periods, and populate output
+// EVENT LISTENER for submit button --- fetch weather data, evaluate burn periods, and populate output
 submitBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
-    clearForecastGrid();
+    // clearForecastGrid();
     clearErrorMessage();
 
     const lat = parseFloat(latitudeInput.value);
@@ -486,20 +327,11 @@ submitBtn.addEventListener("click", async (e) => {
         return;
     }
 
-    const { preferred, acceptable } = getPreferredAndAcceptable();
-        
-    const getRangeValues = (range) => ({
-        min: parseFloat(range.min.value),
-        max: parseFloat(range.max.value)
-    });
-
     try {
         debugLog("Loading forecast data for:", lat, lon);
         await loadForecastData(lat, lon);
 
-        console.log("Raw forecastData array:", forecastData);
-
-        buildLegend();
+        console.log("forecastGridData array:", rawForecastData);
         
     } catch (error) {
         console.error("Error caught in event listener:", error);
