@@ -8,16 +8,15 @@ let forecastPeriods = [];
 
 let rawForecastData = [];
 
-// will this need to change since the grid forecast uses degrees?
-const windDirectionGroups = {
-  	N: ["N", "NNE", "NNW"],
-  	NE: ["NE", "NNE", "ENE"],
-  	E: ["E", "ENE", "ESE"],
-  	SE: ["SE", "SSE", "ESE"],
-  	S: ["S", "SSE", "SSW"],
-  	SW: ["SW", "SSW", "WSW"],
-  	W: ["W", "WSW", "WNW"],
-  	NW: ["NW", "NNW", "WNW"]
+const windDirectionRanges = {
+    N: [[338, 360], [0, 22]],
+    NE: [[23, 67]],
+    E: [[68, 112]],
+    SE: [[113, 157]],
+    S: [[158, 202]],
+    SW: [[203, 247]],
+    W: [[248, 292]],
+    NW: [[293, 337]]
 };
 
 const outputHeader = document.getElementById("output-header");
@@ -87,6 +86,16 @@ function formatForecastLocalTime(isoString, timeZone) {
         minute: "2-digit",
         hour12: false  // 24-hour format
     });
+}
+
+function getNumberValue(inputEl) {
+    if (!inputEl) return null;
+    const value = inputEl.value.trim();
+    return value === "" ? null : Number(value);
+}
+
+function isDegreeInRange(deg, range) {
+    return deg >= range[0] && deg <= range[1];
 }
 
 
@@ -244,7 +253,6 @@ function normalizeForecastData(mergedData, forecastTimezone) {
 
 
 // Functions to process form input data
-
 function getCheckedDirs(name) {
     return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
 }
@@ -260,40 +268,117 @@ function setCheckedDirs(groupName, checkedValues) {
         cb.checked = checkedValues.includes(cb.value);
     });
 }
-// possibly need to add mixing height and transport wind speed?
+
 function getPreferredAndAcceptable() {
     return {
         preferred: {
-        temp: {
-            min: document.getElementById("preferred-min-temp"),
-            max: document.getElementById("preferred-max-temp"),
+            temp: {
+                min: document.getElementById("preferred-min-temp"),
+                max: document.getElementById("preferred-max-temp"),
+            },
+            rh: {
+                min: document.getElementById("preferred-min-rh"),
+                max: document.getElementById("preferred-max-rh"),
+            },
+            windSpeed: {
+                min: document.getElementById("preferred-min-wind-speed"),
+                max: document.getElementById("preferred-max-wind-speed"),
+            },
+            windDirs: () => getCheckedDirs("preferredWindDir")
         },
-        rh: {
-            min: document.getElementById("preferred-min-rh"),
-            max: document.getElementById("preferred-max-rh"),
-        },
-        windSpeed: {
-            min: document.getElementById("preferred-min-wind-speed"),
-            max: document.getElementById("preferred-max-wind-speed"),
-        },
-        windDirs: () => getCheckedDirs("preferredWindDir")
-        },
+
         acceptable: {
-        temp: {
-            min: document.getElementById("acceptable-min-temp"),
-            max: document.getElementById("acceptable-max-temp"),
-        },
-        rh: {
-            min: document.getElementById("acceptable-min-rh"),
-            max: document.getElementById("acceptable-max-rh"),
-        },
-        windSpeed: {
-            min: document.getElementById("acceptable-min-wind-speed"),
-            max: document.getElementById("acceptable-max-wind-speed"),
-        },
-        windDirs: () => getCheckedDirs("acceptableWindDir")
+            temp: {
+                min: document.getElementById("acceptable-min-temp"),
+                max: document.getElementById("acceptable-max-temp"),
+            },
+            rh: {
+                min: document.getElementById("acceptable-min-rh"),
+                max: document.getElementById("acceptable-max-rh"),
+            },
+            windSpeed: {
+                min: document.getElementById("acceptable-min-wind-speed"),
+                max: document.getElementById("acceptable-max-wind-speed"),
+            },
+            windDirs: () => getCheckedDirs("acceptableWindDir")
         }
+    };
+}
+
+
+// Functions to compare user inputs to forecast data
+function matchesWindDirGroup(userDirs, forecastDirDegrees) {
+    if (!userDirs || userDirs.length === 0) return true; // if user doesn't select directions, allow all
+
+    return userDirs.some(dir => {
+        const ranges = windDirectionRanges[dir];
+        if (!ranges) return false;
+
+        return ranges.some(range => isDegreeInRange(forecastDirDegrees, range));
+    });
+}
+
+function determineStatus(entry, preferred, acceptable) {
+    const temp = entry.temperature;
+    const rh = entry.relativeHumidity;
+    const windSpeed = entry.twentyFootWindSpeed;
+    const windDir = entry.twentyFootWindDirection;
+
+    if (
+        temp >= preferred.temp.min && temp <= preferred.temp.max &&
+        rh >= preferred.rh.min && rh <= preferred.rh.max &&
+        windSpeed >= preferred.windSpeed.min && windSpeed <= preferred.windSpeed.max &&
+        matchesWindDirGroup(preferred.windDirs, windDir)
+    ) {
+        return "preferred";
+    } 
+    else if (
+        temp >= acceptable.temp.min && temp <= acceptable.temp.max &&
+        rh >= acceptable.rh.min && rh <= acceptable.rh.max &&
+        windSpeed >= acceptable.windSpeed.min && windSpeed <= acceptable.windSpeed.max &&
+        matchesWindDirGroup(acceptable.windDirs, windDir)
+    ) {
+        return "acceptable";
+    } 
+    else {
+        return "unsuitable";
     }
+}
+
+
+// Function to retrieve location information from Nominatim
+async function fetchLocationDetails(lat, lon) {
+    const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=8&addressdetails=1`;
+
+    try {
+        const response = await fetch(nominatimUrl, {
+            headers: {
+                "User-Agent": "RxBurnWeatherPlanner/1.0 (evans.rxfire@gmail.com) "
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Location lookup failed (status: ${response.status})`);
+        }
+
+        const data = await response.json();
+        const address = data.address || {};
+
+        return {
+            county: address.county || "Unknown County",
+            state: address.state || "Unknown State"
+        };
+    } catch (error) {
+        console.error("Error fetching location details:", error);
+        return {
+            county: "Unknown County",
+            state: "Unknown State"
+        };
+    }
+}
+
+async function loadLocationData(lat, lon) {
+    return await fetchLocationDetails(lat, lon);
 }
 
 // These functions will need updated if adding mixing height and transport winds to form
@@ -478,6 +563,51 @@ submitBtn.addEventListener("click", async (e) => {
         const normalizedFireWeatherData = normalizeForecastData(mergedFireWeatherData, forecastTimezone);
         console.log("Normalized Fire Weather Data:", normalizedFireWeatherData)
         
+        const prefs = getPreferredAndAcceptable();
+
+        const preferred = {
+            temp: {
+                min: Number(prefs.preferred.temp.min.value),
+                max: Number(prefs.preferred.temp.max.value),
+            },
+            rh: {
+                min: Number(prefs.preferred.rh.min.value),
+                max: Number(prefs.preferred.rh.max.value),
+            },
+            windSpeed: {
+                min: Number(prefs.preferred.windSpeed.min.value),
+                max: Number(prefs.preferred.windSpeed.max.value),
+            },
+            windDirs: prefs.preferred.windDirs()
+        };
+
+        const acceptable = {
+            temp: {
+                min: Number(prefs.acceptable.temp.min.value),
+                max: Number(prefs.acceptable.temp.max.value),
+            },
+            rh: {
+                min: Number(prefs.acceptable.rh.min.value),
+                max: Number(prefs.acceptable.rh.max.value),
+            },
+            windSpeed: {
+                min: Number(prefs.acceptable.windSpeed.min.value),
+                max: Number(prefs.acceptable.windSpeed.max.value),
+            },
+            windDirs: prefs.acceptable.windDirs()
+        };
+
+        const evaluatedForecast = normalizedFireWeatherData.map(period => {
+        const status = determineStatus(period, preferred, acceptable);
+
+            return {
+                ...period,
+                status
+            };
+        });
+
+        console.table(evaluatedForecast);
+
     } catch (error) {
         console.error("Error caught in event listener:", error);
         showErrorMessage("No forecast data found for this location. Please check your latitude and longitude.");
