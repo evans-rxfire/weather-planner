@@ -22,7 +22,20 @@ const submitBtn = document.getElementById("submit-button");
 const saveBtn = document.getElementById("save-button");
 const clearBtn = document.getElementById("clear-button");
 
+let deferredPrompt;
+const installBtn = document.getElementById("install-button");
+
 const DEBUG = false;
+
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .then((reg) => debugLog("Service Worker registered:", reg.scope))
+      .catch((err) => debugLog("Service Worker registration failed:", err));
+  });
+}
 
 
 // FUNCTIONS
@@ -118,6 +131,11 @@ function formatDateHeader(isoString, timeZone) {
         day: "numeric"
     })
     .replace(",", "");
+}
+
+// Check if PWA to disable location info fetch from Nominatim
+function isPWA() {
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 }
 
 
@@ -829,4 +847,36 @@ saveBtn.addEventListener("click", () => {
 clearBtn.addEventListener("click", () => {
     clearFormData();
     clearForecastGrid();
+});
+
+
+// app install language
+installBtn?.classList.add("hidden");
+
+
+window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    installBtn?.classList.remove("hidden");
+});
+
+
+installBtn?.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+
+    const { outcome } = await deferredPrompt.userChoice;
+    debugLog("User choice:", outcome);
+
+    deferredPrompt = null;
+    installBtn?.classList.add("hidden");
+});
+
+
+window.addEventListener("appinstalled", () => {
+    debugLog("✅ App installed");
+    deferredPrompt = null;
+    installBtn?.classList.add("hidden");
 });
