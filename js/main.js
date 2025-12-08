@@ -850,7 +850,7 @@ clearBtn.addEventListener("click", () => {
 });
 
 
-// app install language
+// App install language
 installBtn?.classList.add("hidden");
 
 
