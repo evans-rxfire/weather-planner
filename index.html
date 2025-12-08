@@ -5,9 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2563eb">
     <link rel="stylesheet" href="dist/styles.css">
-    <title>Burn Weather Planning App</title>
+    <title>Rx Burn Weather Planning App</title>
 </head>
 <body class="bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100 p-4">
+    <nav class="flex justify-between items-center px-4 py-2 bg-gray-300 dark:bg-gray-900 rounded">
+        <ul class="flex space-x-4 list-none m-0 p-0">
+            <li><a href="index.html" class="text-gray-800 dark:text-gray-100 hover:underline dark:hover:decoration-sky-400">Home</a></li>
+        </ul>
+
+        <div class="relative lg:ml-6">
+            <button id="dropdown-toggle" class="px-4 py-2 text-gray-800 dark:text-gray-100 hover:underline dark:hover:decoration-sky-400">Other Apps</button>
+
+            <div id="dropdown-menu" class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-md z-10 hidden">
+                <a href="https://evans-rxfire.github.io/FDFM_calculator/" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700" target="_blank" rel="noopener noreferrer">FDFM Calculator</a>
+                <a href="https://evans-rxfire.github.io/burnReadinessApp/" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700" target="_blank" rel="noopener noreferrer">Burn Readiness Checklist</a>
+                <a href="https://evans-rxfire.github.io/go_nogo_checklist/" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700" target="_blank" rel="noopener noreferrer">Go/No-Go Checklist</a>
+            </div>
+        </div>
+    </nav>
+
     <header class="p-4 text-center">
         <h1 class="text-2xl font-bold">Rx Burn Weather Planning App</h1>
         <h2 class="text-large font-semibold p-2">Enter burn information and weather parameters below to see possible burn windows for the forecast period.</h2>
@@ -148,6 +164,8 @@
     </main>
 
     <footer class="text-center mt-8 text-sm text-gray-500">
+        <button id="install-button" class=" hidden px-3 py-1.5 bg-green-600 hover:bg-blue-800 text-white rounded mb-4 text-sm">Install App</button>
+
         <p>&copy; 2025 evans-rxfire. Licensed under the
             <a href="LICENSE" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400">MIT License</a>.
         </p>
@@ -160,6 +178,7 @@
         Toggle Dark Mode</button>
     </footer>
     
+    <script src="js/ui.js"></script>
     <script src="js/main.js" defer></script>
 </body>
 </html>

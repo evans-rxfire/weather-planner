@@ -1,10 +1,6 @@
-const htmlElement = document.documentElement;
-
 const propertyName = document.getElementById("property-name");
 const latitudeInput = document.getElementById("latitude-input");
 const longitudeInput = document.getElementById("longitude-input");
-
-let forecastPeriods = [];
 
 let rawForecastData = [];
 
@@ -26,24 +22,7 @@ const submitBtn = document.getElementById("submit-button");
 const saveBtn = document.getElementById("save-button");
 const clearBtn = document.getElementById("clear-button");
 
-const darkModeBtn = document.getElementById("dark-mode-toggle");
-
 const DEBUG = false;
-
-
-if (darkModeBtn) {
-    darkModeBtn.addEventListener("click", () => {
-        htmlElement.classList.toggle("dark");
-        localStorage.setItem("theme", htmlElement.classList.contains("dark") ? "dark" : "light");
-    });
-
-    window.addEventListener("DOMContentLoaded", () => {
-        const savedTheme = localStorage.getItem("theme");
-        if (savedTheme === "dark") {
-            htmlElement.classList.add("dark");
-        }
-    });
-}
 
 
 // FUNCTIONS
@@ -55,7 +34,8 @@ function debugLog(...args) {
     }
 }
 
-// Conversion functions
+
+// Conversion/Helper functions
 function convertCtoF(c) {
     if (c === null || c === undefined) return null;
     return (c * 9/5) + 32;
@@ -84,7 +64,25 @@ function formatForecastLocalTime(isoString, timeZone) {
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
-        hour12: false  // 24-hour format
+        hour12: false 
+    });
+}
+
+function getLocalHourFromFormattedTime(isoString, timeZone) {
+    const formatted = formatForecastLocalTime(isoString, timeZone);
+    // example: "Sat, Dec 6, 21:00"
+    const timePart = formatted.split(", ").pop(); // "21:00"
+    const [hour] = (timePart.split(":"));        // 21
+    return hour.padStart(2, "0") + "00";
+}
+
+function formatDateHeader(isoString, timeZone) {
+    const d = new Date(isoString);
+    return d.toLocaleDateString(undefined, {
+        timeZone,
+        weekday: "short",
+        month: "numeric",
+        day: "numeric"
     });
 }
 
@@ -96,6 +94,30 @@ function getNumberValue(inputEl) {
 
 function isDegreeInRange(deg, range) {
     return deg >= range[0] && deg <= range[1];
+}
+
+// Helper: get local hour (0-23) from UTC ISO + timezone
+function getLocalHourFromUTC(isoString, timeZone) {
+  // returns numeric hour 0-23 in forecast location tz
+    const parts = new Date(isoString).toLocaleString("en-US", {
+        timeZone,
+        hour12: false,
+        hour: "2-digit"
+    });
+  // parts like "04" or "16" or " 4" depending; force number
+  return Number(parts.match(/\d{1,2}/)[0]);
+}
+
+// Helper: format date header (Mon 12/6) using timezone
+function formatDateHeader(isoString, timeZone) {
+    const d = new Date(isoString);
+    return d.toLocaleDateString(undefined, {
+        timeZone,
+        weekday: "short",
+        month: "numeric",
+        day: "numeric"
+    })
+    .replace(",", "");
 }
 
 
@@ -136,8 +158,8 @@ async function fetchForecastData(lat, lon) {
 }
 
 async function loadForecastData(lat, lon) {
-  const result = await fetchForecastData(lat, lon);
-  return result;
+    const result = await fetchForecastData(lat, lon);
+    return result;
 }
 
 
@@ -184,7 +206,7 @@ function expandValidTimeEntry(entry) {
         t.setHours(start.getHours() + i);
 
         expanded.push({
-            time: t.toISOString(), // keep standardized
+            time: t.toISOString(),
             value: entry.value
         });
     }
@@ -381,6 +403,162 @@ async function loadLocationData(lat, lon) {
     return await fetchLocationDetails(lat, lon);
 }
 
+
+// Functions to build output on index.html to show acceptibility
+// Build legend for output-container
+function buildLegend() {
+    const legendContainer = document.getElementById("legend-container");
+    legendContainer.innerHTML = "";
+    const legendItems = [
+        { label: "Preferred", color: "bg-sky-300 dark:bg-sky-600" },
+        { label: "Acceptable", color: "bg-green-300 dark:bg-green-700" },
+        { label: "Not in Prescription", color: "bg-gray-300 dark:bg-gray-600" },
+        { label: "Insufficient Data", color: "bg-yellow-300 dark:bg-yellow-600" }
+    ];
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex justify-center gap-4 mb-4 text-sm";
+
+    legendItems.forEach(item => {
+        const itemDiv = document.createElement("div");
+        itemDiv.className = `flex items-center gap-2`;
+
+        const colorBox = document.createElement("div");
+        colorBox.className = `${item.color} w-6 h-6 rounded`;
+
+        const label = document.createElement("span");
+        label.textContent = item.label;
+
+        itemDiv.appendChild(colorBox);
+        itemDiv.appendChild(label);
+        wrapper.appendChild(itemDiv);
+    });
+
+    legendContainer.appendChild(wrapper);
+}
+
+function buildForecastTable(evaluatedData, location, forecastTimezone) {
+    clearForecastGrid();
+
+    outputHeader.textContent += ` for: ${propertyName.value || ""}${location ? `, ${location.county}, ${location.state}` : ""}`;
+
+    // group entries by local date (yyyy-mm-dd)
+    const grouped = {};
+    evaluatedData.forEach(item => {
+        // compute local date string in forecast timezone (YYYY-MM-DD)
+        const localDate = new Date(item.timeUTC).toLocaleDateString("en-CA", { timeZone: forecastTimezone }); // en-CA => YYYY-MM-DD
+        if (!grouped[localDate]) grouped[localDate] = [];
+        grouped[localDate].push(item);
+    });
+
+    // sort dates ascending
+    const dates = Object.keys(grouped).sort((a,b) => new Date(a) - new Date(b));
+
+    // build lookup: groupedByDateHour[date][hour] = period
+    const groupedByDateHour = {};
+    dates.forEach(date => {
+        groupedByDateHour[date] = {};
+        grouped[date].forEach(period => {
+        const hourKey = getLocalHourFromFormattedTime(period.timeUTC, forecastTimezone);
+        groupedByDateHour[date][hourKey] = period;
+        });
+    });
+
+    // create table element
+    const tableWrapper = document.createElement("div");
+    tableWrapper.className = "overflow-auto";
+
+    const table = document.createElement("table");
+    table.className = "min-w-full table-auto border-collapse";
+
+    // header row: first empty cell + one cell per date
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+
+    dates.forEach(date => {
+        // pick an ISO from grouped[date][0] for nice label
+        const sample = grouped[date][0];
+        const th = document.createElement("th");
+        th.className = "px-2 py-1 text-center";
+        th.textContent = formatDateHeader(sample.timeUTC, forecastTimezone);
+        headRow.appendChild(th);
+    });
+
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    // body: 24 rows for 00..23
+    const tbody = document.createElement("tbody");
+
+    for (let h = 0; h < 24; h++) {
+        const tr = document.createElement("tr");
+
+        // one cell per date
+        for (const date of dates) {
+        const td = document.createElement("td");
+        td.className = "p-1 text-center align-middle";
+
+        const hourKey = String(h).padStart(2, "0") + "00";
+        const period = groupedByDateHour[date][hourKey];
+
+        if (!period) {
+            // no data for that hour
+            td.className += " bg-transparent";
+            td.textContent = "";
+            td.title = `No data for ${date} ${hourKey}:00`;
+        } else {
+            // determine completeness: required fields
+            const requiredFields = [
+                "temperature",
+                "relativeHumidity",
+                "twentyFootWindSpeed",
+                "twentyFootWindDirection"
+            ];
+            const isComplete = requiredFields.every(f => period[f] !== null && period[f] !== undefined);
+
+            // choose color
+            let colorClass = "";
+            if (!isComplete) {
+            colorClass = "bg-yellow-300 dark:bg-yellow-600 dark:text-white"; // incomplete
+            } else if (period.status === "preferred") {
+            colorClass = "bg-sky-300 dark:bg-sky-600 dark:text-white";
+            } else if (period.status === "acceptable") {
+            colorClass = "bg-green-300 dark:bg-green-700 dark:text-white";
+            } else {
+            colorClass = "bg-gray-300 dark:bg-gray-600 dark:text-white";
+            }
+
+            td.className += ` ${colorClass} rounded text-sm font-medium border border-gray-100 dark:border-gray-800`;
+
+            // cell content — keep compact: show hour and optionally a short metric
+            td.textContent = `${hourKey}`;
+
+            // tooltip with details (use template literals, trim)
+            const titleLines = [
+            `Date/time: ${formatForecastLocalTime(period.timeUTC, forecastTimezone)}`,
+            `Temp: ${period.temperature ?? "NA"}°F`,
+            `RH: ${period.relativeHumidity ?? "NA"}%`,
+            `20ft Wind: ${period.twentyFootWindSpeed ?? "NA"} mph @ ${period.twentyFootWindDirection ?? "NA"}°`,
+            `Status: ${period.status}`,
+            !isComplete ? "INCOMPLETE: missing required fields" : ""
+            ].filter(Boolean);
+
+            td.title = titleLines.join("\n");
+        }
+
+        tr.appendChild(td);
+        }
+
+        tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    tableWrapper.appendChild(table);
+
+    outputContainer.appendChild(tableWrapper);
+}
+
+
 // These functions will need updated if adding mixing height and transport winds to form
 // Save form data for future use
 function saveFormData() {
@@ -533,7 +711,7 @@ document.addEventListener("DOMContentLoaded", loadFormData);
 submitBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
-    // clearForecastGrid();
+    clearForecastGrid();
     clearErrorMessage();
 
     const lat = parseFloat(latitudeInput.value);
@@ -545,6 +723,20 @@ submitBtn.addEventListener("click", async (e) => {
     }
 
     try {
+        let location = { county: "Unknown County", state: "Unknown State" };
+        if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true) {
+            console.warn("PWA mode detected. Skipping location lookup.");
+
+            const locationNotice = document.createElement("span");
+            locationNotice.className = "text-md text-blue-600 dark:text-blue-500";
+            locationNotice.textContent = "(Location information is unavailable in installed mode)";
+
+            outputHeader.appendChild(locationNotice);
+        } else {
+            debugLog("Fetching location data for:", lat, lon);
+            location = await loadLocationData(lat, lon);
+        }
+
         debugLog("Loading forecast data for:", lat, lon);
         const result = await loadForecastData(lat, lon);
 
@@ -552,16 +744,16 @@ submitBtn.addEventListener("click", async (e) => {
         const forecastTimezone = result.timeZone;
 
         const fireWeatherData = getFireWeatherForecastData(rawForecastData);
-        // console.log("Extracted Fire Weather Data:", fireWeatherData);
+        debugLog("Extracted Fire Weather Data:", fireWeatherData);
 
         const expandedFireWeatherData = expandForecastData(fireWeatherData);
-        // console.log("Expanded Fire Weather Data:", expandedFireWeatherData);
+        debugLog("Expanded Fire Weather Data:", expandedFireWeatherData);
 
         const mergedFireWeatherData = mergeExpandedForecast(expandedFireWeatherData);
-        // console.log("Merged Fire Weather Data:", mergedFireWeatherData);
+        debugLog("Merged Fire Weather Data:", mergedFireWeatherData);
 
         const normalizedFireWeatherData = normalizeForecastData(mergedFireWeatherData, forecastTimezone);
-        console.log("Normalized Fire Weather Data:", normalizedFireWeatherData)
+        debugLog("Normalized Fire Weather Data:", normalizedFireWeatherData)
         
         const prefs = getPreferredAndAcceptable();
 
@@ -606,7 +798,10 @@ submitBtn.addEventListener("click", async (e) => {
             };
         });
 
-        console.table(evaluatedForecast);
+        // console.table(evaluatedForecast);
+
+        buildLegend();
+        buildForecastTable(evaluatedForecast, location, forecastTimezone);
 
     } catch (error) {
         console.error("Error caught in event listener:", error);

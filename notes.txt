@@ -20,6 +20,7 @@ App will filter throught the severn-day forecast to determine if there is an bur
 	
 Results will be displayed by date with the hours color coded for an visual output.
 
+
 ------------
 
 basic HTML structure
@@ -52,6 +53,7 @@ basic HTML structure
 	</div>
 	<div repeat for rest of forecast period
 </div>
+
 
 ------------
 
@@ -105,6 +107,7 @@ Or would it be better to split out everything into different functions?
 	...
 	then another function would check to see if all parameters were preferred, acceptable, or no burn
 	
+	
 ------------
 
 Other notes:
@@ -122,3 +125,14 @@ temp
 rh
 windSpeed
 windDir
+
+
+------------
+
+In the weather.gov API, the forecastGridData uses `/PTxH` if the same value applies to hours or days
+	"validTime": "2025-11-19T11:00:00+00:00/PT4H",
+	"value": "17.22222",
+	
+/PtxH means that the same value applies to the next "x" hours.
+/PxDTyH == same value applies for the next "x" days and "y" hours
+
