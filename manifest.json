@@ -1,35 +1,35 @@
 {
-    "id": "/weather-planner/",
+    "id": "/fire-weather-planner/",
     "name": "Prescribed Burn Weather Planner",
     "short_name": "Rx Fire Weather Planner",
     "description": "Find prescribed burn windows in the weather forecast based on prescription parameters.",
-    "start_url": "/weather-planner/index.html",
-    "scope": "/weather-planner/",
+    "start_url": "/fire-weather-planner/index.html",
+    "scope": "/fire-weather-planner/",
     "display": "standalone",
     "background_color": "#f8f9fa",
     "theme_color": "#2563eb",
     "orientation": "portrait",
     "icons": [
         {
-        "src": "/weather-planner/icons/icon-192.png",
+        "src": "/fire-weather-planner/icons/icon-192.png",
         "sizes": "192x192",
         "type": "image/png"
         },
         {
-        "src": "/weather-planner/icons/icon-512.png",
+        "src": "/fire-weather-planner/icons/icon-512.png",
         "sizes": "512x512",
         "type": "image/png"
         }
     ],
     "screenshots": [
         {
-            "src": "/weather-planner/icons/screenshot-wide.png",
+            "src": "/fire-weather-planner/icons/screenshot-wide.png",
             "sizes": "1255x901",
             "type": "image/png",
             "form_factor": "wide"
         },
         {
-            "src": "/weather-planner/icons/screenshot-default.png",
+            "src": "/fire-weather-planner/icons/screenshot-default.png",
             "sizes": "512x454",
             "type": "image/png"
         }
