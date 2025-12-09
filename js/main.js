@@ -413,18 +413,44 @@ async function loadLocationData(lat, lon) {
 // Build a containter to hold forecast link and related information
 function buildForecastLink(lat, lon) {
     const linkContainer = document.getElementById("forecast-link-container");
+    if(!linkContainer) return;
+
     linkContainer.innerHTML = "";
 
-    const pointForecastUrl = `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}&unit=0&lg=english&FcstType=graphical`;
+    const latFixed = lat.toFixed(4);
+    const lonFixed = lon.toFixed(4);
+
+    const pointForecastUrl = `https://forecast.weather.gov/MapClick.php?lat=${latFixed}&lon=${lonFixed}&unit=0&lg=english&FcstType=graphical`;
 
     const wrapper = document.createElement("div");
-    wrapper.className = "mb-4 text-sm text-center border border-gray-300 dark:border-gray-600 p-2 rounded-md";
+    wrapper.className = "mb-4 text-sm text-center border border-gray-300 dark:border-gray-600 p-2 rounded-md bg-gray-100 dark:bg-gray-800";
 
     const linkParagraph = document.createElement("p");
-    linkParagraph.innerHTML = `The National Weather Service (NWS) forecast for the prescribed burn can be found here: <a href="${pointForecastUrl}" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">Point Forecast</a>`;
+    const coordinates = `${latFixed}, ${lonFixed}`;
+    linkParagraph.textContent = `The National Weather Service (NWS) forecast for ${coordinates} can be found here: `;
+
+    const forecastLink = document.createElement("a");
+    forecastLink.href = pointForecastUrl;
+    forecastLink.target = "_blank";
+    forecastLink.rel = "noopener noreferrer";
+    forecastLink.className = "font-semibold text-blue-600 hover:underline dark:text-blue-400";
+    forecastLink.setAttribute("aria-label", "Open National Weather Service point forecast in new tab");
+    forecastLink.textContent = "Point Forecast";
+
+    linkParagraph.appendChild(forecastLink);
 
     const howToParagraph = document.createElement("p");
-    howToParagraph.innerHTML = `For more information on NWS point forecasts, review the provided <a href="https://docs.google.com/document/d/135GaKVAMILCETM3MFHCdpE5O4QaQtIHCT4emThaKOIc/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">Point Forecast Guide</a>.`;
+    howToParagraph.textContent = "For more information on NWS point forecasts, review the provided Google Doc ";
+
+    const guideLink = document.createElement("a");
+    guideLink.href = "https://docs.google.com/document/d/135GaKVAMILCETM3MFHCdpE5O4QaQtIHCT4emThaKOIc/edit?usp=sharing";
+    guideLink.target = "_blank";
+    guideLink.rel = "noopener noreferrer";
+    guideLink.className = "font-semibold text-blue-600 hover:underline dark:text-blue-400";
+    guideLink.setAttribute("aria-label", "Open Point Forecast Guide in new tab");
+    guideLink.textContent = "Point Forecast Guide";
+    
+    howToParagraph.appendChild(guideLink);
 
     wrapper.appendChild(linkParagraph);
     wrapper.appendChild(howToParagraph);
