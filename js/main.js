@@ -418,7 +418,7 @@ function buildForecastLink(lat, lon) {
     const pointForecastUrl = `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}&unit=0&lg=english&FcstType=graphical`;
 
     const wrapper = document.createElement("div");
-    wrapper.className = "flex justify-center mb-4 text-sm border border-gray-300 dark:border-gray-600 p-4 rounded-md";
+    wrapper.className = "mb-4 text-sm text-center border border-gray-300 dark:border-gray-600 p-2 rounded-md";
 
     const linkParagraph = document.createElement("p");
     linkParagraph.innerHTML = `The National Weather Service (NWS) forecast for the prescribed burn can be found here: <a href="${pointForecastUrl}" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">Point Forecast</a>`;
