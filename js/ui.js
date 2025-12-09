@@ -35,3 +35,48 @@ if (dropdownBtn && dropdownMenu) {
     }, 10);
   });
 }
+
+// App installation
+let deferredPrompt;
+const installBtn = document.getElementById("install-button");
+
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('./service-worker.js')
+      .then((reg) => debugLog("Service Worker registered:", reg.scope))
+      .catch((err) => debugLog("Service Worker registration failed:", err));
+  });
+}
+
+// App install language
+installBtn?.classList.add("hidden");
+
+
+window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    installBtn?.classList.remove("hidden");
+});
+
+
+installBtn?.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+
+    const { outcome } = await deferredPrompt.userChoice;
+    debugLog("User choice:", outcome);
+
+    deferredPrompt = null;
+    installBtn?.classList.add("hidden");
+});
+
+
+window.addEventListener("appinstalled", () => {
+    debugLog("✅ App installed");
+    deferredPrompt = null;
+    installBtn?.classList.add("hidden");
+});

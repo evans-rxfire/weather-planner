@@ -21,10 +21,35 @@ function debugLog(...args) {
     }
 }
 
+
+
+
+
 // Build a containter to hold forecast link and related information
-function buildForecastLink(location) {
-    
+function buildForecastLink(lat, lon) {
+    const linkContainer = document.getElementById("forecast-link-container");
+    linkContainer.innerHTML = "";
+
+    const pointForecastUrl = `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}&unit=0&lg=english&FcstType=graphical`;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex justify-center mb-4 text-sm border border-gray-300 dark:border-gray-600 p-4 rounded-md";
+
+    const linkParagraph = document.createElement("p");
+    linkParagraph.innerHTML = `The National Weather Service (NWS) forecast for the prescribed burn can be found here: <a href="${pointForecastUrl}" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">Point Forecast</a>`;
+
+    const howToParagraph = document.createElement("p");
+    howToParagraph.innerHTML = `For more information on NWS point forecasts, review the provided <a href="https://docs.google.com/document/d/135GaKVAMILCETM3MFHCdpE5O4QaQtIHCT4emThaKOIc/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">Point Forecast Guide</a>.`;
+
+    wrapper.appendChild(linkParagraph);
+    wrapper.appendChild(howToParagraph);
+
+    linkContainer.appendChild(wrapper);
 }
+
+
+
+
 
 // Build legend for output-container in index.html
 function buildLegend() {

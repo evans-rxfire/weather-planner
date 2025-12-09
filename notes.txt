@@ -136,3 +136,16 @@ In the weather.gov API, the forecastGridData uses `/PTxH` if the same value appl
 /PtxH means that the same value applies to the next "x" hours.
 /PxDTyH == same value applies for the next "x" days and "y" hours
 
+Link to get to point weather forecast based on lat/long:
+
+ 
+
+`https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}&unit=0&lg=english&FcstType=graphical`
+
+ 
+
+Add link somewhere in output container. Probably in its own <div>.
+
+ 
+
+Also add link to point forecast how-to document. Google Docs or PDF? In same div as forecast link.

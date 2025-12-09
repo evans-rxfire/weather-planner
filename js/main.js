@@ -22,20 +22,7 @@ const submitBtn = document.getElementById("submit-button");
 const saveBtn = document.getElementById("save-button");
 const clearBtn = document.getElementById("clear-button");
 
-let deferredPrompt;
-const installBtn = document.getElementById("install-button");
-
 const DEBUG = false;
-
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('./service-worker.js')
-      .then((reg) => debugLog("Service Worker registered:", reg.scope))
-      .catch((err) => debugLog("Service Worker registration failed:", err));
-  });
-}
 
 
 // FUNCTIONS
@@ -423,6 +410,28 @@ async function loadLocationData(lat, lon) {
 
 
 // Functions to build output on index.html to show acceptibility
+// Build a containter to hold forecast link and related information
+function buildForecastLink(lat, lon) {
+    const linkContainer = document.getElementById("forecast-link-container");
+    linkContainer.innerHTML = "";
+
+    const pointForecastUrl = `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}&unit=0&lg=english&FcstType=graphical`;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex justify-center mb-4 text-sm border border-gray-300 dark:border-gray-600 p-4 rounded-md";
+
+    const linkParagraph = document.createElement("p");
+    linkParagraph.innerHTML = `The National Weather Service (NWS) forecast for the prescribed burn can be found here: <a href="${pointForecastUrl}" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">Point Forecast</a>`;
+
+    const howToParagraph = document.createElement("p");
+    howToParagraph.innerHTML = `For more information on NWS point forecasts, review the provided <a href="https://docs.google.com/document/d/135GaKVAMILCETM3MFHCdpE5O4QaQtIHCT4emThaKOIc/edit?usp=sharing" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">Point Forecast Guide</a>.`;
+
+    wrapper.appendChild(linkParagraph);
+    wrapper.appendChild(howToParagraph);
+
+    linkContainer.appendChild(wrapper);
+}
+
 // Build legend for output-container
 function buildLegend() {
     const legendContainer = document.getElementById("legend-container");
@@ -818,6 +827,7 @@ submitBtn.addEventListener("click", async (e) => {
 
         // console.table(evaluatedForecast);
 
+        buildForecastLink(lat, lon);
         buildLegend();
         buildForecastTable(evaluatedForecast, location, forecastTimezone);
 
@@ -849,34 +859,3 @@ clearBtn.addEventListener("click", () => {
     clearForecastGrid();
 });
 
-
-// App install language
-installBtn?.classList.add("hidden");
-
-
-window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-
-    installBtn?.classList.remove("hidden");
-});
-
-
-installBtn?.addEventListener("click", async () => {
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-
-    const { outcome } = await deferredPrompt.userChoice;
-    debugLog("User choice:", outcome);
-
-    deferredPrompt = null;
-    installBtn?.classList.add("hidden");
-});
-
-
-window.addEventListener("appinstalled", () => {
-    debugLog("✅ App installed");
-    deferredPrompt = null;
-    installBtn?.classList.add("hidden");
-});
